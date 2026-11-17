@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>STUDIO / 编辑室</title>
+<link rel="stylesheet" href="./editor.css">
+<script type="module" src="./editor.js"></script>
+</head>
+<body>
+<header class="mast"><a href="../">← 返回档案</a><span>AFTERIMAGE / LOCAL STUDIO</span></header>
+<main>
+  <div class="lead"><p>EDITORIAL WORKROOM</p><h1>编辑室 <em>Studio</em></h1><p>本机文件工作区。发布仅更新本地公开预览，部署由 Git 单独完成。</p></div>
+  <nav aria-label="编辑工作区" id="tabs">
+    <button data-tab="journal" aria-pressed="true">日记</button><button data-tab="notes">碎碎念</button>
+    <button data-tab="culture">文化档案</button><button data-tab="photography">摄影</button>
+    <button data-tab="media">素材</button><button data-tab="home">首页</button>
+  </nav>
+  <p id="notice" role="status" aria-live="polite">正在读取项目文件…</p>
+  <div id="workspace" aria-busy="true"></div>
+</main>
+<dialog id="confirm"><form method="dialog">
+  <h2>确认删除</h2><p></p>
+  <label>请输入「删除」<input name="verify" autocomplete="off"></label>
+  <div class="actions"><button value="cancel">取消</button><button value="delete" class="danger" disabled>永久删除</button></div>
+</form></dialog>
+<dialog id="preview"><header><h2>本地预览</h2><form method="dialog"><button>关闭</button></form></header><iframe title="内容预览" sandbox="allow-same-origin"></iframe></dialog>
+</body></html>

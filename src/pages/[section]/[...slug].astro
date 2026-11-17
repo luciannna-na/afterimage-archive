@@ -1,0 +1,81 @@
+---
+import { render } from "astro:content";
+import Site from "../../layouts/Site.astro";
+import Photo from "../../components/Photo.astro";
+import { published } from "../../config/content";
+import { sections, url, transitionId } from "../../config/site";
+export async function getStaticPaths() {
+  const groups = await Promise.all((["journal", "culture", "photography"] as const).map(async section => {
+    const entries = await published(section);
+    return entries.map((entry, index) => ({params: {section, slug: entry.id},
+      props: {section, entry, newer: entries[index - 1], older: entries[index + 1]}}));
+  }));
+  return groups.flat();
+}
+const { section, entry, newer, older } = Astro.props;
+const { data } = entry;
+const { Content } = await render(entry);
+const photos = data.cover ? [data.cover, ...data.photos] : data.photos;
+---
+<Site section={section} title={data.title} transition={section === "journal" ? "reading" : "section"}>
+  <article class="detail">
+    <a class="back" href={url(section + "/")} data-back>← 返回{sections[section].title}</a>
+    <header>
+      <p class="meta" lang="en">{data.category || sections[section].label}</p>
+      <h1 class="article-title" style={section === "journal" ? `view-transition-name:${transitionId("title", entry.id)}` : undefined}>{data.title}</h1>
+      <p class="meta"><span lang="en">RECORDED ON</span> <time datetime={data.date}>{data.date}</time> / {data.archive}</p>
+    </header>
+    {section === "photography" ? <div class="contact-sheet" data-gallery>
+      {photos.map((photo, index) => <a href={url(photo.src)} data-frame={index} aria-label={`查看照片 ${index + 1}：${photo.alt}`}><Photo photo={photo} /></a>)}
+      <dialog class="viewer" aria-label="照片查看器">
+        <div class="viewer-toolbar"><button type="button" data-previous>上一张</button><span data-position aria-live="polite"></span><button type="button" data-next>下一张</button><button type="button" data-close>关闭</button></div>
+        <img alt="" /><p data-caption></p>
+      </dialog>
+    </div> : <Photo photo={data.cover} eager transitionName={section === "journal" ? transitionId("cover", entry.id) : undefined} />}
+    {data.details && <p class="meta">{data.details}</p>}
+    <div class="prose"><Content /></div>
+    {section !== "photography" && data.photos.map(photo => <Photo photo={photo} />)}
+    {data.tags.length > 0 && <p class="meta">{data.tags.map(tag => <a href={url(`${section}/?tag=${encodeURIComponent(tag)}`)}>#{tag}　</a>)}</p>}
+    {section === "journal" && <nav class="article-nav" aria-label="相邻日记">
+      {older && <a href={url(`journal/${older.id}/`)}>← 上一篇 · {older.data.title}</a>}
+      {newer && <a href={url(`journal/${newer.id}/`)}>下一篇 · {newer.data.title} →</a>}
+    </nav>}
+  </article>
+</Site>
+<script>
+  document.addEventListener("astro:page-load", () => {
+    const gallery = document.querySelector<HTMLElement>("[data-gallery]");
+    const dialog = gallery?.querySelector("dialog");
+    const image = dialog?.querySelector("img");
+    if (!gallery || !dialog || !image || gallery.dataset.ready) return;
+    gallery.dataset.ready = "1";
+    const frames = [...gallery.querySelectorAll<HTMLAnchorElement>("[data-frame]")];
+    let current = 0;
+    let trigger: HTMLAnchorElement | undefined;
+    const show = (index: number) => {
+      current = (index + frames.length) % frames.length;
+      const frame = frames[current];
+      image.src = frame.href;
+      image.alt = frame.querySelector("img")?.alt ?? "";
+      dialog.querySelector("[data-position]")!.textContent = `${current + 1} / ${frames.length}`;
+      dialog.querySelector("[data-caption]")!.textContent = frame.querySelector("figcaption")?.textContent ?? "";
+    };
+    frames.forEach((frame, index) => frame.addEventListener("click", event => {
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      trigger = frame;
+      show(index);
+      dialog.showModal();
+    }));
+    dialog.querySelector("[data-previous]")?.addEventListener("click", () => show(current - 1));
+    dialog.querySelector("[data-next]")?.addEventListener("click", () => show(current + 1));
+    dialog.querySelector("[data-close]")?.addEventListener("click", () => dialog.close());
+    dialog.addEventListener("close", () => trigger?.focus({preventScroll: true}));
+    dialog.addEventListener("keydown", event => {
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        event.preventDefault();
+        show(current + (event.key === "ArrowLeft" ? -1 : 1));
+      }
+    });
+  });
+</script>

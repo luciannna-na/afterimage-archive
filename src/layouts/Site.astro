@@ -1,0 +1,127 @@
+---
+import { ClientRouter } from "astro:transitions";
+import { site, sections, url } from "../config/site";
+import "../styles/main.css";
+const { title, section, transition = "section" } = Astro.props;
+const studio = import.meta.env.DEV;
+---
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content={site.intro} />
+  <link rel="icon" type="image/svg+xml" href={url("favicon.svg")} />
+  <title>{title ? `${title} / ${site.name}` : `${site.english} / ${site.name}`}</title>
+  <script is:inline>
+    try { document.documentElement.dataset.theme = localStorage.getItem("afterimage-theme") || "dark"; } catch {}
+  </script>
+  <ClientRouter fallback="swap" />
+</head>
+<body class={section} style={`--archive-scan:url("${url(site.scan)}")`}>
+<a class="skip" href="#main">跳至正文</a>
+<header class="top" transition:name="masthead" transition:animate="none">
+  <a class="brand" href={url()} aria-label={site.name}>
+    {site.logo && <img width="24" height="24" src={url(site.logo)} alt="" />}
+    <span>{site.english}</span><span>{site.name}</span>
+  </a>
+  <nav aria-label="主导航">
+    {Object.entries(sections).map(([key, info]) => <a href={url(key + "/")} aria-current={key === section ? "page" : undefined}>{info.title}</a>)}
+  </nav>
+  <div class="top-tools">{studio && <a class="studio-link" href={url("studio/")} data-astro-reload>STUDIO <span>编辑室</span></a>}<label class="theme"><span class="sr">配色</span><select id="theme"><option value="system">跟随系统</option><option value="light">日间</option><option value="dark">暗房</option></select></label></div>
+</header>
+<main id="main" tabindex="-1" class:list={["shell", transition]} transition:name="main">
+  <slot />
+</main>
+<footer class="foot shell"><span>{site.english} / {site.name}</span><span>{site.footer}</span><span lang="en">{site.archive}</span></footer>
+<script>
+  const setupTheme = () => {
+    const select = document.querySelector<HTMLSelectElement>("#theme");
+    if (!select) return;
+    try { select.value = localStorage.getItem("afterimage-theme") || "system"; } catch {}
+    select.onchange = () => {
+      document.documentElement.dataset.theme = select.value;
+      try { localStorage.setItem("afterimage-theme", select.value); } catch {}
+    };
+  };
+  document.addEventListener("astro:page-load", setupTheme);
+  document.addEventListener("astro:after-swap", () => {
+    try { document.documentElement.dataset.theme = localStorage.getItem("afterimage-theme") || "system"; } catch {}
+  });
+</script>
+<script>
+  document.addEventListener("astro:page-load", () => {
+    for (const link of document.querySelectorAll<HTMLAnchorElement>(".entry-link[data-entry]")) {
+      link.onclick = event => {
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        try {
+          sessionStorage.setItem("afterimage-return", JSON.stringify({destination: link.pathname, source: location.pathname + location.search, scroll: scrollY}));
+        } catch {}
+      };
+    }
+    const back = document.querySelector<HTMLAnchorElement>("[data-back]");
+    try {
+      const saved = JSON.parse(sessionStorage.getItem("afterimage-return") ?? "null");
+      if (back && saved?.destination === location.pathname) {
+        back.href = saved.source;
+        back.onclick = event => {
+          if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+          sessionStorage.setItem("afterimage-restore", JSON.stringify(saved));
+        };
+      }
+      const restore = JSON.parse(sessionStorage.getItem("afterimage-restore") ?? "null");
+      if (restore?.source === location.pathname + location.search) {
+        sessionStorage.removeItem("afterimage-restore");
+        requestAnimationFrame(() => scrollTo(0, restore.scroll));
+      }
+    } catch {}
+    for (const paper of document.querySelectorAll<HTMLDetailsElement>("[data-paper]")) {
+      const trigger = paper.querySelector("summary");
+      const content = paper.querySelector(".paper-content");
+      if (!trigger || !content || typeof HTMLDialogElement.prototype.showModal !== "function") continue;
+      trigger.setAttribute("aria-haspopup", "dialog");
+      trigger.onclick = event => {
+        event.preventDefault();
+        const origin = paper.getBoundingClientRect();
+        const dialog = document.createElement("dialog");
+        dialog.className = "paper-dialog";
+        dialog.setAttribute("aria-label", trigger.textContent?.trim() || "碎碎念");
+        const header = document.createElement("header");
+        const heading = document.createElement("h2");
+        heading.textContent = trigger.textContent;
+        const close = document.createElement("button");
+        close.textContent = "关闭";
+        close.type = "button";
+        header.append(heading, close);
+        dialog.append(header, content);
+        document.body.append(dialog);
+        dialog.showModal();
+        const motion = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const destination = dialog.getBoundingClientRect();
+        const collapsed = {
+          transform: "translate(" + (origin.x - destination.x) + "px," + (origin.y - destination.y) +
+            "px) scale(" + Math.min(1, origin.width / destination.width) + "," + Math.min(1, origin.height / destination.height) + ")",
+          transformOrigin: "top left", opacity: .75,
+        };
+        if (motion) dialog.animate([collapsed, {transform:"none", opacity:1}], {duration:360, easing:"cubic-bezier(.2,.7,.2,1)"});
+        const finish = async () => {
+          if (dialog.dataset.closing) return;
+          dialog.dataset.closing = "1";
+          if (motion) await dialog.animate([{transform:"none", opacity:1}, collapsed], {duration:220, fill:"forwards"}).finished.catch(() => {});
+          dialog.close();
+        };
+        close.onclick = finish;
+        dialog.oncancel = event => { event.preventDefault(); void finish(); };
+        dialog.onclick = event => { if (event.target === dialog) void finish(); };
+        dialog.onclose = () => {
+          paper.append(content);
+          dialog.remove();
+          trigger.focus({preventScroll:true});
+        };
+      };
+    }
+  });
+</script>
+
+</body>
+</html>

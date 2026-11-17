@@ -1,0 +1,24 @@
+{
+  "dependencies": {
+    "@astrojs/check": "^0.9.12",
+    "@fontsource/cormorant-garamond": "^5.3.0",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource/lxgw-wenkai-tc": "^5.3.1",
+    "@fontsource/noto-sans-sc": "^5.3.1",
+    "@fontsource/noto-serif-sc": "^5.3.1",
+    "@fontsource/source-serif-4": "^5.3.1",
+    "astro": "^5.18.2",
+    "typescript": "^5.9.3",
+    "@astrojs/markdown-remark": "6.3.11"
+  },
+  "name": "afterimage",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "check": "astro check",
+    "preview": "astro preview",
+    "studio": "astro dev --host 127.0.0.1"
+  }
+}

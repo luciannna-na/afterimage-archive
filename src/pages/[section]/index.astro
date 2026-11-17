@@ -1,0 +1,86 @@
+---
+import Site from "../../layouts/Site.astro";
+import Entry from "../../components/Entry.astro";
+import Photo from "../../components/Photo.astro";
+import { published } from "../../config/content";
+import { site, sections, url, type Section } from "../../config/site";
+export function getStaticPaths() {
+  return Object.keys(sections).map(section => ({params: {section}}));
+}
+const section = Astro.params.section as Section;
+const info = sections[section];
+const entries = section === "about" ? [] : await published(section);
+const tags = [...new Set(entries.flatMap(entry => entry.data.tags))];
+const months = [...new Set(entries.map(entry => entry.data.date.slice(0,7)))];
+const categories = section === "culture" ? ["CINEMA", "MUSIC", "READING"] : [""];
+---
+<Site title={info.title} section={section}>
+  <header class="page-head">
+    <p class="meta" lang="en">{info.deck}</p>
+    <h1>{info.title} <em lang="en">{info.label}</em></h1>
+    <Photo photo={site.headers[section]} />
+  </header>
+  {section === "about" ? (
+    <section class="about-grid">
+      <div class="prose">
+        <h2>一份关于日常的档案</h2>
+        <p>{site.intro}</p>
+        <p>这里收存日记、随手写下的句子，以及那些值得再翻一次的照片和文化记录。</p>
+        <p>本站内容与摄影为演示示例。个人介绍、兴趣、创作方向和器材可由站点主人补写。</p>
+      </div>
+      <Photo photo={site.about} />
+    </section>
+  ) : (
+    <>
+      {(section === "journal" || section === "notes") && <form class="filters" data-filters>
+        {section === "journal" && <><label>搜索 <input name="q" type="search" placeholder="标题、正文或标签" /></label><label>月份 <select name="month"><option value="">全部月份</option>{months.map(month => <option>{month}</option>)}</select></label></>}
+        <label>标签 <select name="tag"><option value="">全部标签</option>{tags.map(tag => <option>{tag}</option>)}</select></label>
+        <p data-empty hidden role="status">没有匹配的记录。</p>
+      </form>}
+      {section === "culture" && <nav class="categories" aria-label="文化分类">{categories.map(category => <a href={`#${category.toLowerCase()}`}>{category}</a>)}</nav>}
+      {categories.map(category => <section id={category.toLowerCase() || undefined} class="collection-group">
+        {category && <h2 lang="en">{category}</h2>}
+        <div class="entries">{entries.filter(entry => !category || entry.data.category === category).map(entry =>
+          <div data-record data-month={entry.data.date.slice(0,7)} data-tags={JSON.stringify(entry.data.tags)}
+            data-search={[entry.data.title, entry.data.summary, entry.body, ...entry.data.tags].join(" ")}>
+            <Entry entry={entry} section={section} />
+          </div>
+        )}</div>
+      </section>)}
+    </>
+  )}
+</Site>
+<script>
+  function initFilters() {
+    const form = document.querySelector<HTMLFormElement>("[data-filters]");
+    if (!form || form.dataset.ready) return;
+    form.dataset.ready = "1";
+    const params = new URLSearchParams(location.search);
+    const controls = [...form.querySelectorAll<HTMLInputElement | HTMLSelectElement>("input, select")];
+    for (const control of controls) control.value = params.get(control.name) || "";
+    const apply = (update: boolean) => {
+      const values = new FormData(form);
+      const query = String(values.get("q") ?? "").trim().toLowerCase();
+      const month = values.get("month");
+      const tag = values.get("tag");
+      let found = 0;
+      for (const record of document.querySelectorAll<HTMLElement>("[data-record]")) {
+        const match = (!month || record.dataset.month === month) &&
+          (!tag || JSON.parse(record.dataset.tags ?? "[]").includes(tag)) &&
+          (!query || record.dataset.search?.toLowerCase().includes(query));
+        record.hidden = !match;
+        if (match) found++;
+      }
+      form.querySelector("[data-empty]")?.toggleAttribute("hidden", found > 0);
+      if (update) {
+        const next = new URL(location.href);
+        for (const control of controls) control.value ? next.searchParams.set(control.name, control.value) : next.searchParams.delete(control.name);
+        history.replaceState(history.state, "", next);
+      }
+    };
+    form.addEventListener("input", () => apply(true));
+    form.addEventListener("submit", event => { event.preventDefault(); apply(true); });
+    apply(false);
+  }
+  document.addEventListener("astro:page-load", initFilters);
+</script>

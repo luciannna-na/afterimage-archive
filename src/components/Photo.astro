@@ -1,0 +1,9 @@
+---
+import { url } from "../config/site";
+interface Props {photo?: {src: string; alt: string; caption?: string}; eager?: boolean; transitionName?: string}
+const {photo, eager = false, transitionName} = Astro.props;
+---
+{photo && <figure class="photo">
+  <img style={transitionName ? `view-transition-name:${transitionName}` : undefined} src={url(photo.src)} alt={photo.alt} loading={eager ? "eager" : "lazy"} fetchpriority={eager ? "high" : "auto"} decoding="async" />
+  {photo.caption && <figcaption><span lang="en">FRAME / </span>{photo.caption}</figcaption>}
+</figure>}

@@ -1,0 +1,29 @@
+[
+  {
+    "section": "journal",
+    "hidden": false
+  },
+  {
+    "section": "notes",
+    "ids": [
+      "window"
+    ],
+    "hidden": false
+  },
+  {
+    "section": "culture",
+    "ids": [
+      "last-screening",
+      "side-b",
+      "paper-room"
+    ],
+    "hidden": false
+  },
+  {
+    "section": "photography",
+    "ids": [
+      "after-rain"
+    ],
+    "hidden": false
+  }
+]

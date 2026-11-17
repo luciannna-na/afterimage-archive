@@ -1,0 +1,26 @@
+---
+import { render, type CollectionEntry } from "astro:content";
+import { url, sections, type Section, transitionId } from "../config/site";
+import Photo from "./Photo.astro";
+interface Props { entry: CollectionEntry<Exclude<Section, "about">>; section: Exclude<Section, "about"> }
+const { entry, section } = Astro.props;
+const { data, id } = entry;
+const { Content } = section === "notes" ? await render(entry) : {Content: undefined};
+const href = url(`${section}/${id}/`);
+---
+<article class:list={["entry", section]}>
+  <p class="meta"><span lang="en">{data.category || sections[section as keyof typeof sections].label}</span> / <time datetime={data.date}>{data.date}</time></p>
+  {section === "notes" ? (
+    <details class="paper" data-paper>
+      <summary>{data.title || data.summary || "展开纸条"}</summary>
+      <div class="paper-content"><div class="prose">{Content && <Content />}</div><Photo photo={data.cover} />{data.photos.map((photo) => <Photo photo={photo} />)}</div>
+    </details>
+  ) : (
+    <>
+      <a class="entry-link" href={href} data-entry={id}><Photo photo={data.cover} transitionName={section === "journal" ? transitionId("cover", id) : undefined} /><h3 style={section === "journal" ? `view-transition-name:${transitionId("title", id)}` : undefined}>{data.title}</h3></a>
+      {data.summary && <p>{data.summary}</p>}
+      {section === "culture" && data.details && <details><summary>档案资料</summary><p>{data.details}</p></details>}
+    </>
+  )}
+  {section === "notes" && data.tags.length > 0 && <p class="meta">{data.tags.join(" / ")}</p>}
+</article>

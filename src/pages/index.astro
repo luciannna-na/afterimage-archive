@@ -1,0 +1,42 @@
+---
+import Site from "../layouts/Site.astro";
+import Photo from "../components/Photo.astro";
+import Entry from "../components/Entry.astro";
+import { site, sections, url } from "../config/site";
+import { home } from "../config/home";
+import { published } from "../config/content";
+const blocks = await Promise.all(home.filter(block => !block.hidden).map(async block => {
+  const all = await published(block.section);
+  const items = block.ids ? block.ids.flatMap(id => all.find(item => id === item.id) ?? []) : all.slice(0,3);
+  return {...block, items};
+}));
+---
+<Site>
+  <section class="zine" aria-labelledby="cover-title">
+    <div class="cover-index"><span lang="en">INDEPENDENT ARCHIVE / VOL. 03</span><span>{site.archive}</span></div>
+    <div class="zine-art">
+      <div class="cover-photo"><Photo photo={site.hero} eager /></div>
+      <div class="cover-scan" aria-hidden="true"></div>
+      <div class="cover-inset"><Photo photo={site.inset} /></div>
+      <div class="cover-spine" lang="en">IMAGE FILE / {site.archive}</div>
+    </div>
+    <div class="cover-type">
+      <p lang="en" class="cover-pencil">Index of ordinary days</p>
+      <h1 id="cover-title" lang="en">{site.english}</h1>
+      <div class="cover-chinese"><span>{site.name}</span></div>
+    </div>
+    <aside class="cover-slip">
+      <p lang="en" class="meta">{site.subtitle}</p>
+      <p>{site.intro}</p>
+      <a href={url("journal/")}>翻开日记 <span aria-hidden="true">↗</span></a>
+    </aside>
+  </section>
+  {blocks.map(({section, items}, index) => <section class:list={["home-block", section]}>
+    <div class="section-head">
+      <span class="section-digit" aria-hidden="true">0{index + 1}</span>
+      <div><p class="meta" lang="en">{sections[section].deck}</p><h2>{sections[section].title} <em lang="en">{sections[section].label}</em></h2></div>
+      <a href={url(section + "/")}>浏览全部 ↗</a>
+    </div>
+    {items.length > 0 ? <div class="entries">{items.map(entry => <Entry entry={entry} section={section} />)}</div> : <p class="meta">暂无公开记录</p>}
+  </section>)}
+</Site>
